@@ -1,0 +1,1651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard PCA - Funcional Real</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjs@11.8.0/lib/browser/math.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --card-bg: #ffffff;
+            --sidebar-bg: #34495e;
+            --text-primary: #2c3e50;
+            --text-secondary: #7f8c8d;
+            --border: #bdc3c7;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .dashboard-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            min-height: 90vh;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(90deg, var(--primary), var(--dark));
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo i {
+            font-size: 2.5rem;
+            color: #3498db;
+        }
+        
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .logo span {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .upload-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .upload-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .upload-btn:hover {
+            background: #219653;
+            transform: translateY(-2px);
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .file-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .dashboard-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            min-height: calc(90vh - 100px);
+        }
+        
+        .sidebar {
+            background: var(--sidebar-bg);
+            color: white;
+            padding: 25px 20px;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .menu-item {
+            padding: 15px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .menu-item:hover, .menu-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .menu-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .pca-controls {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        
+        .pca-controls h3 {
+            font-size: 1rem;
+            margin-bottom: 15px;
+            color: var(--secondary);
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .control-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .calculate-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--secondary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        
+        .calculate-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        .main-content {
+            padding: 30px;
+            overflow-y: auto;
+            max-height: calc(90vh - 100px);
+        }
+        
+        .view {
+            display: none;
+        }
+        
+        .view.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-top: 4px solid;
+        }
+        
+        .stat-card:nth-child(1) { border-color: var(--danger); }
+        .stat-card:nth-child(2) { border-color: var(--warning); }
+        .stat-card:nth-child(3) { border-color: var(--success); }
+        .stat-card:nth-child(4) { border-color: var(--secondary); }
+        
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+        }
+        
+        .stat-card:nth-child(1) .stat-icon { background: var(--danger); }
+        .stat-card:nth-child(2) .stat-icon { background: var(--warning); }
+        .stat-card:nth-child(3) .stat-icon { background: var(--success); }
+        .stat-card:nth-child(4) .stat-icon { background: var(--secondary); }
+        
+        .stat-content h3 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-content p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+        
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .chart-header h3 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chart-wrapper {
+            height: 300px;
+            position: relative;
+        }
+        
+        .data-table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+            overflow-x: auto;
+        }
+        
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: var(--light);
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary);
+            border-bottom: 2px solid var(--border);
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        tbody tr:hover {
+            background: rgba(52, 152, 219, 0.05);
+        }
+        
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+        }
+        
+        .loading.active {
+            display: flex;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--secondary);
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .heatmap-container {
+            display: grid;
+            grid-template-columns: 150px repeat(auto-fit, minmax(80px, 1fr));
+            gap: 5px;
+            margin-top: 20px;
+        }
+        
+        .heatmap-cell {
+            padding: 10px;
+            text-align: center;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .heatmap-cell.header {
+            background: var(--primary);
+            color: white;
+            font-weight: 700;
+        }
+        
+        .heatmap-cell.var-header {
+            background: var(--dark);
+            color: white;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 1200px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .sidebar.active {
+                display: block;
+                position: fixed;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                width: 250px;
+                z-index: 100;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i>
+                <div>
+                    <h1>PCA Dashboard</h1>
+                    <span>Análisis de Componentes Principales</span>
+                </div>
+            </div>
+            
+            <div class="upload-section">
+                <button class="upload-btn" id="uploadBtn">
+                    <i class="fas fa-upload"></i> Subir Dataset
+                </button>
+                <input type="file" id="fileInput" accept=".csv">
+                <div class="file-info" id="fileInfo">
+                    Sin archivo cargado
+                </div>
+            </div>
+        </header>
+        
+        <div class="dashboard-content">
+            <aside class="sidebar" id="sidebar">
+                <nav class="menu">
+                    <div class="menu-item active" data-view="overview">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Visión General</span>
+                    </div>
+                    <div class="menu-item" data-view="data">
+                        <i class="fas fa-database"></i>
+                        <span>Datos</span>
+                    </div>
+                    <div class="menu-item" data-view="analysis">
+                        <i class="fas fa-calculator"></i>
+                        <span>Análisis PCA</span>
+                    </div>
+                    <div class="menu-item" data-view="results">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Resultados</span>
+                    </div>
+                    <div class="menu-item" data-view="heatmap">
+                        <i class="fas fa-fire"></i>
+                        <span>Heatmap</span>
+                    </div>
+                </nav>
+                
+                <div class="pca-controls">
+                    <h3><i class="fas fa-sliders-h"></i> Configuración PCA</h3>
+                    
+                    <div class="control-group">
+                        <label for="nComponents">Número de Componentes:</label>
+                        <input type="number" id="nComponents" min="2" max="10" value="3">
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="normalize">Normalizar Datos:</label>
+                        <select id="normalize" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white;">
+                            <option value="true">Sí</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+                    
+                    <button class="calculate-btn" id="calculateBtn">
+                        <i class="fas fa-calculator"></i> Calcular PCA
+                    </button>
+                </div>
+            </aside>
+            
+            <main class="main-content">
+                <!-- VISTA: VISIÓN GENERAL -->
+                <div class="view active" id="overviewView">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-layer-group"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="statComponents">0</h3>
+                                <p>Componentes</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-chart-pie"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="statVariance">0%</h3>
+                                <p>Varianza</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="statVariables">0</h3>
+                                <p>Variables</p>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-samples"></i>
+                            </div>
+                            <div class="stat-content">
+                                <h3 id="statSamples">0</h3>
+                                <p>Muestras</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="charts-grid">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-bar"></i> Varianza Explicada</h3>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="varianceChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-braille"></i> Scatter Plot</h3>
+                                <div>
+                                    <select id="scatterX" style="padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border);">
+                                        <option value="0">PC1</option>
+                                        <option value="1">PC2</option>
+                                        <option value="2">PC3</option>
+                                    </select>
+                                    <select id="scatterY" style="padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border); margin-left: 10px;">
+                                        <option value="1">PC2</option>
+                                        <option value="0">PC1</option>
+                                        <option value="2">PC3</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="scatterChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VISTA: DATOS -->
+                <div class="view" id="dataView">
+                    <div class="data-table-container">
+                        <div class="table-header">
+                            <h3><i class="fas fa-table"></i> Dataset Cargado</h3>
+                            <button class="upload-btn" style="padding: 8px 15px; font-size: 0.9rem;">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                        </div>
+                        <div id="dataTable" style="overflow-x: auto;">
+                            <!-- Tabla generada dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VISTA: ANÁLISIS -->
+                <div class="view" id="analysisView">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-project-diagram"></i> Correlaciones</h3>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="correlationChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="data-table-container" style="margin-top: 25px;">
+                        <div class="table-header">
+                            <h3><i class="fas fa-calculator"></i> Estadísticas por Variable</h3>
+                        </div>
+                        <div id="statsTable">
+                            <!-- Tabla de estadísticas -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VISTA: RESULTADOS -->
+                <div class="view" id="resultsView">
+                    <div class="data-table-container">
+                        <div class="table-header">
+                            <h3><i class="fas fa-cube"></i> Cargas Factoriales (Loadings)</h3>
+                        </div>
+                        <div id="loadingsTable">
+                            <!-- Tabla de loadings -->
+                        </div>
+                    </div>
+                    
+                    <div class="charts-grid" style="margin-top: 25px;">
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-line"></i> Scores PCA</h3>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="scoresChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-header">
+                                <h3><i class="fas fa-chart-area"></i> Biplot</h3>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="biplotChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- VISTA: HEATMAP -->
+                <div class="view" id="heatmapView">
+                    <div class="chart-container">
+                        <div class="chart-header">
+                            <h3><i class="fas fa-fire"></i> Heatmap de Cargas Factoriales</h3>
+                        </div>
+                        <div id="heatmapContainer">
+                            <!-- Heatmap generado dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <div class="loading" id="loadingOverlay">
+        <div class="spinner"></div>
+        <h3 id="loadingText">Calculando PCA...</h3>
+    </div>
+    
+    <div class="notification" id="notification" style="display: none;">
+        <i class="fas fa-check-circle"></i>
+        <span id="notificationText">Operación completada</span>
+    </div>
+
+    <script>
+        // ============================================
+        // IMPLEMENTACIÓN REAL DE PCA
+        // ============================================
+        
+        class PCACalculator {
+            constructor() {
+                this.data = null;
+                this.variables = [];
+                this.originalData = null;
+                this.results = null;
+            }
+            
+            // Normalizar datos (z-score)
+            normalizeData(data) {
+                const normalized = [];
+                const means = [];
+                const stds = [];
+                
+                // Calcular media y desviación estándar por columna
+                const cols = data[0].length;
+                for (let j = 0; j < cols; j++) {
+                    let sum = 0;
+                    for (let i = 0; i < data.length; i++) {
+                        sum += data[i][j];
+                    }
+                    const mean = sum / data.length;
+                    means.push(mean);
+                    
+                    let variance = 0;
+                    for (let i = 0; i < data.length; i++) {
+                        variance += Math.pow(data[i][j] - mean, 2);
+                    }
+                    const std = Math.sqrt(variance / (data.length - 1));
+                    stds.push(std);
+                }
+                
+                // Aplicar normalización
+                for (let i = 0; i < data.length; i++) {
+                    const row = [];
+                    for (let j = 0; j < cols; j++) {
+                        if (stds[j] === 0) {
+                            row.push(0);
+                        } else {
+                            row.push((data[i][j] - means[j]) / stds[j]);
+                        }
+                    }
+                    normalized.push(row);
+                }
+                
+                return normalized;
+            }
+            
+            // Calcular matriz de covarianza
+            calculateCovarianceMatrix(data) {
+                const n = data.length;
+                const p = data[0].length;
+                const covMatrix = Array(p).fill().map(() => Array(p).fill(0));
+                
+                for (let i = 0; i < p; i++) {
+                    for (let j = i; j < p; j++) {
+                        let sum = 0;
+                        for (let k = 0; k < n; k++) {
+                            sum += data[k][i] * data[k][j];
+                        }
+                        covMatrix[i][j] = sum / (n - 1);
+                        covMatrix[j][i] = covMatrix[i][j];
+                    }
+                }
+                
+                return covMatrix;
+            }
+            
+            // Calcular autovalores y autovectores (método iterativo simple)
+            calculateEigen(covMatrix, maxComponents) {
+                const p = covMatrix.length;
+                let eigenvectors = Array(p).fill().map(() => Array(p).fill(0));
+                let eigenvalues = Array(p).fill(0);
+                
+                // Método de potencia para el primer autovector
+                for (let comp = 0; comp < Math.min(maxComponents, p); comp++) {
+                    let vector = Array(p).fill(1/Math.sqrt(p));
+                    let prevVector;
+                    
+                    // Iterar hasta convergencia
+                    for (let iter = 0; iter < 100; iter++) {
+                        prevVector = [...vector];
+                        
+                        // Multiplicar matriz por vector
+                        let newVector = Array(p).fill(0);
+                        for (let i = 0; i < p; i++) {
+                            for (let j = 0; j < p; j++) {
+                                newVector[i] += covMatrix[i][j] * vector[j];
+                            }
+                        }
+                        
+                        // Normalizar
+                        let norm = Math.sqrt(newVector.reduce((sum, val) => sum + val * val, 0));
+                        vector = newVector.map(val => val / norm);
+                        
+                        // Verificar convergencia
+                        let diff = 0;
+                        for (let i = 0; i < p; i++) {
+                            diff += Math.abs(vector[i] - prevVector[i]);
+                        }
+                        
+                        if (diff < 1e-10) break;
+                    }
+                    
+                    // Calcular autovalor
+                    let eigenvalue = 0;
+                    for (let i = 0; i < p; i++) {
+                        for (let j = 0; j < p; j++) {
+                            eigenvalue += vector[i] * covMatrix[i][j] * vector[j];
+                        }
+                    }
+                    
+                    eigenvalues[comp] = eigenvalue;
+                    for (let i = 0; i < p; i++) {
+                        eigenvectors[comp][i] = vector[i];
+                    }
+                    
+                    // Deflación: remover componente actual
+                    for (let i = 0; i < p; i++) {
+                        for (let j = 0; j < p; j++) {
+                            covMatrix[i][j] -= eigenvalue * vector[i] * vector[j];
+                        }
+                    }
+                }
+                
+                return { eigenvalues: eigenvalues.slice(0, maxComponents), eigenvectors };
+            }
+            
+            // Calcular PCA completo
+            calculatePCA(data, variables, nComponents = 3, normalize = true) {
+                this.originalData = data;
+                this.variables = variables;
+                
+                // 1. Normalizar datos
+                this.data = normalize ? this.normalizeData(data) : data;
+                
+                // 2. Calcular matriz de covarianza
+                const covMatrix = this.calculateCovarianceMatrix(this.data);
+                
+                // 3. Calcular autovalores y autovectores
+                const { eigenvalues, eigenvectors } = this.calculateEigen(covMatrix, nComponents);
+                
+                // 4. Calcular varianza explicada
+                const totalVariance = eigenvalues.reduce((sum, val) => sum + val, 0);
+                const varianceExplained = eigenvalues.map(val => (val / totalVariance) * 100);
+                
+                // 5. Calcular varianza acumulada
+                const cumulativeVariance = [];
+                let sum = 0;
+                for (let v of varianceExplained) {
+                    sum += v;
+                    cumulativeVariance.push(sum);
+                }
+                
+                // 6. Calcular loadings (cargas factoriales)
+                const loadings = [];
+                for (let i = 0; i < variables.length; i++) {
+                    const row = [];
+                    for (let j = 0; j < nComponents; j++) {
+                        row.push(eigenvectors[j][i] * Math.sqrt(eigenvalues[j]));
+                    }
+                    loadings.push(row);
+                }
+                
+                // 7. Calcular scores (puntuaciones)
+                const scores = [];
+                for (let i = 0; i < data.length; i++) {
+                    const row = [];
+                    for (let j = 0; j < nComponents; j++) {
+                        let score = 0;
+                        for (let k = 0; k < variables.length; k++) {
+                            score += this.data[i][k] * eigenvectors[j][k];
+                        }
+                        row.push(score);
+                    }
+                    scores.push(row);
+                }
+                
+                // 8. Calcular comunalidades
+                const communalities = loadings.map(row => 
+                    row.reduce((sum, val) => sum + val * val, 0)
+                );
+                
+                this.results = {
+                    eigenvalues,
+                    eigenvectors,
+                    loadings,
+                    scores,
+                    varianceExplained,
+                    cumulativeVariance,
+                    communalities,
+                    nComponents
+                };
+                
+                return this.results;
+            }
+            
+            // Obtener estadísticas descriptivas
+            getDescriptiveStats() {
+                if (!this.originalData) return null;
+                
+                const stats = [];
+                const n = this.originalData.length;
+                
+                for (let j = 0; j < this.variables.length; j++) {
+                    const values = this.originalData.map(row => row[j]);
+                    const sorted = [...values].sort((a, b) => a - b);
+                    
+                    const mean = values.reduce((sum, val) => sum + val, 0) / n;
+                    const variance = values.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / (n - 1);
+                    const std = Math.sqrt(variance);
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const median = n % 2 === 0 ? 
+                        (sorted[n/2 - 1] + sorted[n/2]) / 2 : 
+                        sorted[Math.floor(n/2)];
+                    
+                    stats.push({
+                        variable: this.variables[j],
+                        mean: mean.toFixed(3),
+                        std: std.toFixed(3),
+                        min: min.toFixed(3),
+                        max: max.toFixed(3),
+                        median: median.toFixed(3)
+                    });
+                }
+                
+                return stats;
+            }
+            
+            // Obtener matriz de correlación
+            getCorrelationMatrix() {
+                if (!this.data) return null;
+                
+                const n = this.data.length;
+                const p = this.variables.length;
+                const corrMatrix = Array(p).fill().map(() => Array(p).fill(0));
+                
+                for (let i = 0; i < p; i++) {
+                    for (let j = i; j < p; j++) {
+                        if (i === j) {
+                            corrMatrix[i][j] = 1;
+                        } else {
+                            let sum = 0;
+                            for (let k = 0; k < n; k++) {
+                                sum += this.data[k][i] * this.data[k][j];
+                            }
+                            corrMatrix[i][j] = sum / (n - 1);
+                            corrMatrix[j][i] = corrMatrix[i][j];
+                        }
+                    }
+                }
+                
+                return corrMatrix;
+            }
+        }
+        
+        // ============================================
+        // APLICACIÓN PRINCIPAL
+        // ============================================
+        
+        const app = {
+            pca: new PCACalculator(),
+            currentData: null,
+            charts: {},
+            
+            init() {
+                this.bindEvents();
+                this.loadSampleData();
+                this.showNotification('Dashboard PCA cargado. Usando datos de ejemplo.', 'info');
+            },
+            
+            bindEvents() {
+                // Navegación
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        const view = e.currentTarget.dataset.view;
+                        this.switchView(view);
+                    });
+                });
+                
+                // Subida de archivos
+                document.getElementById('uploadBtn').addEventListener('click', () => {
+                    document.getElementById('fileInput').click();
+                });
+                
+                document.getElementById('fileInput').addEventListener('change', (e) => {
+                    this.handleFileUpload(e.target.files[0]);
+                });
+                
+                // Calcular PCA
+                document.getElementById('calculateBtn').addEventListener('click', () => {
+                    this.calculatePCA();
+                });
+                
+                // Selectores de scatter plot
+                document.getElementById('scatterX').addEventListener('change', () => this.updateScatterPlot());
+                document.getElementById('scatterY').addEventListener('change', () => this.updateScatterPlot());
+            },
+            
+            loadSampleData() {
+                // Datos de ejemplo reales (iris dataset simplificado)
+                const sampleData = {
+                    variables: ['Sepal.Length', 'Sepal.Width', 'Petal.Length', 'Petal.Width'],
+                    data: [
+                        [5.1, 3.5, 1.4, 0.2],
+                        [4.9, 3.0, 1.4, 0.2],
+                        [4.7, 3.2, 1.3, 0.2],
+                        [4.6, 3.1, 1.5, 0.2],
+                        [5.0, 3.6, 1.4, 0.2],
+                        [5.4, 3.9, 1.7, 0.4],
+                        [4.6, 3.4, 1.4, 0.3],
+                        [5.0, 3.4, 1.5, 0.2],
+                        [4.4, 2.9, 1.4, 0.2],
+                        [4.9, 3.1, 1.5, 0.1],
+                        [5.4, 3.7, 1.5, 0.2],
+                        [4.8, 3.4, 1.6, 0.2],
+                        [4.8, 3.0, 1.4, 0.1],
+                        [4.3, 3.0, 1.1, 0.1],
+                        [5.8, 4.0, 1.2, 0.2],
+                        [5.7, 4.4, 1.5, 0.4],
+                        [5.4, 3.9, 1.3, 0.4],
+                        [5.1, 3.5, 1.4, 0.3],
+                        [5.7, 3.8, 1.7, 0.3],
+                        [5.1, 3.8, 1.5, 0.3],
+                        [5.4, 3.4, 1.7, 0.2],
+                        [5.1, 3.7, 1.5, 0.4],
+                        [4.6, 3.6, 1.0, 0.2],
+                        [5.1, 3.3, 1.7, 0.5],
+                        [4.8, 3.4, 1.9, 0.2],
+                        [5.0, 3.0, 1.6, 0.2],
+                        [5.0, 3.4, 1.6, 0.4],
+                        [5.2, 3.5, 1.5, 0.2],
+                        [5.2, 3.4, 1.4, 0.2],
+                        [4.7, 3.2, 1.6, 0.2]
+                    ]
+                };
+                
+                this.currentData = sampleData;
+                this.updateDataDisplay();
+                this.calculatePCA();
+            },
+            
+            async handleFileUpload(file) {
+                if (!file) return;
+                
+                this.showLoading('Cargando archivo...');
+                
+                try {
+                    const text = await this.readFile(file);
+                    const data = this.parseCSV(text);
+                    
+                    this.currentData = data;
+                    this.updateDataDisplay();
+                    this.showNotification(`Archivo "${file.name}" cargado correctamente`, 'success');
+                    
+                    document.getElementById('fileInfo').innerHTML = `
+                        <i class="fas fa-check-circle" style="color: #27ae60;"></i>
+                        ${file.name} (${data.data.length} filas × ${data.variables.length} columnas)
+                    `;
+                    
+                } catch (error) {
+                    this.showNotification(`Error al cargar archivo: ${error.message}`, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            },
+            
+            readFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = (e) => reject(new Error('Error leyendo archivo'));
+                    reader.readAsText(file);
+                });
+            },
+            
+            parseCSV(text) {
+                const lines = text.trim().split('\n');
+                const variables = lines[0].split(',').map(v => v.trim());
+                const data = [];
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',').map(v => {
+                        const num = parseFloat(v.trim());
+                        return isNaN(num) ? 0 : num;
+                    });
+                    
+                    if (values.length === variables.length) {
+                        data.push(values);
+                    }
+                }
+                
+                return { variables, data };
+            },
+            
+            calculatePCA() {
+                if (!this.currentData || !this.currentData.data.length) {
+                    this.showNotification('Primero carga un dataset', 'warning');
+                    return;
+                }
+                
+                this.showLoading('Calculando PCA...');
+                
+                try {
+                    const nComponents = parseInt(document.getElementById('nComponents').value) || 3;
+                    const normalize = document.getElementById('normalize').value === 'true';
+                    
+                    // Calcular PCA
+                    const results = this.pca.calculatePCA(
+                        this.currentData.data,
+                        this.currentData.variables,
+                        nComponents,
+                        normalize
+                    );
+                    
+                    // Actualizar interfaz
+                    this.updateResultsDisplay();
+                    this.updateCharts();
+                    this.updateStats();
+                    
+                    this.showNotification(`PCA calculado con ${nComponents} componentes`, 'success');
+                    
+                } catch (error) {
+                    console.error('Error en PCA:', error);
+                    this.showNotification(`Error en cálculo PCA: ${error.message}`, 'error');
+                } finally {
+                    this.hideLoading();
+                }
+            },
+            
+            updateDataDisplay() {
+                if (!this.currentData) return;
+                
+                // Actualizar estadísticas
+                document.getElementById('statVariables').textContent = this.currentData.variables.length;
+                document.getElementById('statSamples').textContent = this.currentData.data.length;
+                
+                // Mostrar tabla de datos
+                this.renderDataTable();
+                
+                // Mostrar estadísticas descriptivas
+                this.renderStatsTable();
+            },
+            
+            updateResultsDisplay() {
+                if (!this.pca.results) return;
+                
+                const results = this.pca.results;
+                
+                // Actualizar estadísticas
+                document.getElementById('statComponents').textContent = results.nComponents;
+                document.getElementById('statVariance').textContent = 
+                    `${results.cumulativeVariance[results.cumulativeVariance.length - 1].toFixed(1)}%`;
+                
+                // Mostrar tabla de loadings
+                this.renderLoadingsTable();
+                
+                // Mostrar heatmap
+                this.renderHeatmap();
+            },
+            
+            updateStats() {
+                if (!this.pca.results) return;
+                
+                const stats = this.pca.getDescriptiveStats();
+                if (stats) {
+                    this.renderStatsTable();
+                }
+            },
+            
+            renderDataTable() {
+                const container = document.getElementById('dataTable');
+                const data = this.currentData;
+                const maxRows = 20; // Mostrar solo las primeras 20 filas
+                
+                let html = `
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                ${data.variables.map(v => `<th>${v}</th>`).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                for (let i = 0; i < Math.min(maxRows, data.data.length); i++) {
+                    html += `
+                        <tr>
+                            <td style="font-weight: bold;">${i + 1}</td>
+                            ${data.data[i].map(val => `<td>${typeof val === 'number' ? val.toFixed(4) : val}</td>`).join('')}
+                        </tr>
+                    `;
+                }
+                
+                html += `
+                        </tbody>
+                    </table>
+                    ${data.data.length > maxRows ? 
+                        `<p style="margin-top: 10px; color: #7f8c8d; font-style: italic;">
+                            Mostrando ${maxRows} de ${data.data.length} filas
+                        </p>` : ''}
+                `;
+                
+                container.innerHTML = html;
+            },
+            
+            renderStatsTable() {
+                const container = document.getElementById('statsTable');
+                const stats = this.pca.getDescriptiveStats();
+                
+                if (!stats) return;
+                
+                let html = `
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                <th>Media</th>
+                                <th>Desv. Est.</th>
+                                <th>Mínimo</th>
+                                <th>Máximo</th>
+                                <th>Mediana</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                stats.forEach(stat => {
+                    html += `
+                        <tr>
+                            <td><strong>${stat.variable}</strong></td>
+                            <td>${stat.mean}</td>
+                            <td>${stat.std}</td>
+                            <td>${stat.min}</td>
+                            <td>${stat.max}</td>
+                            <td>${stat.median}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            },
+            
+            renderLoadingsTable() {
+                const container = document.getElementById('loadingsTable');
+                const results = this.pca.results;
+                const variables = this.pca.variables;
+                
+                let html = `
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Variable</th>
+                                ${Array.from({length: results.nComponents}, (_, i) => 
+                                    `<th>PC${i + 1}</th>`).join('')}
+                                <th>Comunalidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                variables.forEach((variable, i) => {
+                    html += `
+                        <tr>
+                            <td><strong>${variable}</strong></td>
+                            ${results.loadings[i].map(val => 
+                                `<td style="color: ${val >= 0 ? '#e74c3c' : '#3498db'}; font-weight: bold;">
+                                    ${val.toFixed(4)}
+                                </td>`
+                            ).join('')}
+                            <td style="font-weight: bold; color: ${results.communalities[i] > 0.7 ? '#27ae60' : 
+                                results.communalities[i] > 0.5 ? '#f39c12' : '#e74c3c'}">
+                                ${results.communalities[i].toFixed(4)}
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            },
+            
+            renderHeatmap() {
+                const container = document.getElementById('heatmapContainer');
+                const results = this.pca.results;
+                const variables = this.pca.variables;
+                
+                let html = '<div class="heatmap-container">';
+                
+                // Encabezados
+                html += '<div class="heatmap-cell var-header">Variable</div>';
+                for (let i = 0; i < results.nComponents; i++) {
+                    html += `<div class="heatmap-cell header">PC${i + 1}</div>`;
+                }
+                
+                // Filas de datos
+                variables.forEach((variable, i) => {
+                    html += `<div class="heatmap-cell var-header">${variable}</div>`;
+                    
+                    results.loadings[i].forEach((value, j) => {
+                        const intensity = Math.min(Math.abs(value) * 2, 1);
+                        const hue = value >= 0 ? 0 : 240; // Rojo para positivo, azul para negativo
+                        const color = `hsl(${hue}, 70%, ${70 - intensity * 40}%)`;
+                        
+                        html += `
+                            <div class="heatmap-cell" style="background: ${color}; color: ${intensity > 0.5 ? 'white' : 'black'};"
+                                 title="${variable} - PC${j + 1}: ${value.toFixed(4)}">
+                                ${value.toFixed(3)}
+                            </div>
+                        `;
+                    });
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+            },
+            
+            updateCharts() {
+                if (!this.pca.results) return;
+                
+                this.updateVarianceChart();
+                this.updateScatterPlot();
+                this.updateCorrelationChart();
+                this.updateScoresChart();
+            },
+            
+            updateVarianceChart() {
+                const ctx = document.getElementById('varianceChart')?.getContext('2d');
+                if (!ctx || !this.pca.results) return;
+                
+                if (this.charts.variance) {
+                    this.charts.variance.destroy();
+                }
+                
+                const results = this.pca.results;
+                const labels = results.varianceExplained.map((_, i) => `PC${i + 1}`);
+                
+                this.charts.variance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Varianza Individual',
+                                data: results.varianceExplained,
+                                backgroundColor: '#e74c3c',
+                                borderColor: '#c0392b',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Varianza Acumulada',
+                                data: results.cumulativeVariance,
+                                type: 'line',
+                                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                borderColor: '#3498db',
+                                borderWidth: 3,
+                                pointBackgroundColor: '#3498db',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                pointRadius: 6,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Varianza (%)'
+                                },
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            },
+            
+            updateScatterPlot() {
+                const ctx = document.getElementById('scatterChart')?.getContext('2d');
+                if (!ctx || !this.pca.results) return;
+                
+                if (this.charts.scatter) {
+                    this.charts.scatter.destroy();
+                }
+                
+                const xIndex = parseInt(document.getElementById('scatterX').value) || 0;
+                const yIndex = parseInt(document.getElementById('scatterY').value) || 1;
+                const scores = this.pca.results.scores;
+                
+                this.charts.scatter = new Chart(ctx, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Puntuaciones PCA',
+                            data: scores.map((row, i) => ({
+                                x: row[xIndex],
+                                y: row[yIndex],
+                                label: `Muestra ${i + 1}`
+                            })),
+                            backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                            borderColor: 'rgba(52, 152, 219, 1)',
+                            borderWidth: 1,
+                            pointRadius: 6,
+                            pointHoverRadius: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const point = context.raw;
+                                        return [
+                                            `PC${xIndex + 1}: ${point.x.toFixed(3)}`,
+                                            `PC${yIndex + 1}: ${point.y.toFixed(3)}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: `PC${xIndex + 1}`,
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: `PC${yIndex + 1}`,
+                                    font: {
+                                        size: 14,
+                                        weight: 'bold'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            updateCorrelationChart() {
+                const ctx = document.getElementById('correlationChart')?.getContext('2d');
+                if (!ctx || !this.pca.results) return;
+                
+                if (this.charts.correlation) {
+                    this.charts.correlation.destroy();
+                }
+                
+                const corrMatrix = this.pca.getCorrelationMatrix();
+                const variables = this.pca.variables;
+                
+                const data = {
+                    labels: variables,
+                    datasets: [{
+                        label: 'Correlación',
+                        data: corrMatrix.flatMap((row, i) => 
+                            row.map((value, j) => ({x: j, y: i, v: value}))
+                        ),
+                        backgroundColor: (ctx) => {
+                            const value = ctx.dataset.data[ctx.dataIndex].v;
+                            const alpha = Math.abs(value);
+                            return `rgba(${value > 0 ? '231, 76, 60' : '52, 152, 219'}, ${alpha})`;
+                        },
+                        borderWidth: 1,
+                        borderColor: 'white',
+                        width: ({chart}) => (chart.chartArea.width / variables.length) - 2,
+                        height: ({chart}) => (chart.chartArea.height / variables.length) - 2
+                    }]
+                };
+                
+                this.charts.correlation = new Chart(ctx, {
+                    type: 'matrix',
+                    data: data,
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: () => '',
+                                    label: (ctx) => {
+                                        const item = ctx.dataset.data[ctx.dataIndex];
+                                        return [
+                                            `${variables[item.y]} vs ${variables[item.x]}`,
+                                            `Correlación: ${item.v.toFixed(3)}`
+                                        ];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    display: true,
+                                    maxRotation: 45
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    display: true
+                                },
+                                grid: {
+                                    display: false
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            updateScoresChart() {
+                const ctx = document.getElementById('scoresChart')?.getContext('2d');
+                if (!ctx || !this.pca.results) return;
+                
+                if (this.charts.scores) {
+                    this.charts.scores.destroy();
+                }
+                
+                const scores = this.pca.results.scores;
+                const n = Math.min(20, scores.length); // Mostrar solo las primeras 20 muestras
+                
+                this.charts.scores = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array.from({length: n}, (_, i) => `Muestra ${i + 1}`),
+                        datasets: this.pca.results.loadings[0].map((_, pcIndex) => ({
+                            label: `PC${pcIndex + 1}`,
+                            data: scores.slice(0, n).map(row => row[pcIndex]),
+                            borderColor: `hsl(${pcIndex * 60}, 70%, 50%)`,
+                            backgroundColor: `hsla(${pcIndex * 60}, 70%, 50%, 0.1)`,
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Puntuación PCA'
+                                }
+                            }
+                        }
+                    }
+                });
+            },
+            
+            switchView(viewName) {
+                // Actualizar menú
+                document.querySelectorAll('.menu-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.dataset.view === viewName) {
+                        item.classList.add('active');
+                    }
+                });
+                
+                // Mostrar vista correspondiente
+                document.querySelectorAll('.view').forEach(view => {
+                    view.classList.remove('active');
+                    if (view.id === `${viewName}View`) {
+                        view.classList.add('active');
+                    }
+                });
+            },
+            
+            showLoading(message = 'Procesando...') {
+                const loading = document.getElementById('loadingOverlay');
+                const text = document.getElementById('loadingText');
+                text.textContent = message;
+                loading.classList.add('active');
+            },
+            
+            hideLoading() {
+                const loading = document.getElementById('loadingOverlay');
+                loading.classList.remove('active');
+            },
+            
+            showNotification(message, type = 'info') {
+                const notification = document.getElementById('notification');
+                const text = document.getElementById('notificationText');
+                
+                const colors = {
+                    success: '#27ae60',
+                    error: '#e74c3c',
+                    warning: '#f39c12',
+                    info: '#3498db'
+                };
+                
+                notification.style.backgroundColor = colors[type] || colors.info;
+                text.textContent = message;
+                notification.style.display = 'flex';
+                
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000);
+            }
+        };
+        
+        // Iniciar aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
